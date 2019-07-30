@@ -59,6 +59,7 @@
     <module>mapreduce</module>
     <module>tools</module>
     <module>examples</module>
+    <module>atest</module>
   </modules>
 
   <properties>

@@ -23,11 +23,12 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>orc-examples</artifactId>
+    <artifactId>orc-atest</artifactId>
     <packaging>jar</packaging>
-    <name>ORC Examples</name>
+    <name>ORC ATest</name>
     <description>
-
+        The core reader and writer for ORC files. Uses the vectorized column batch
+        for the in memory representation.
     </description>
 
     <dependencies>
