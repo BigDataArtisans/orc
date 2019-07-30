@@ -31,38 +31,38 @@ import org.apache.orc.TypeDescription;
 import java.io.IOException;
 
 public class CoreReader {
-  public static void main(Configuration conf, String[] args) throws IOException {
-    // Get the information from the file footer
-    Reader reader = OrcFile.createReader(new Path("my-file.orc"),
-                                         OrcFile.readerOptions(conf));
-    System.out.println("File schema: " + reader.getSchema());
-    System.out.println("Row count: " + reader.getNumberOfRows());
+    public static void main(Configuration conf, String[] args) throws IOException {
+        // Get the information from the file footer
+        Reader reader = OrcFile.createReader(new Path("my-file.orc"),
+                OrcFile.readerOptions(conf));
+        System.out.println("File schema: " + reader.getSchema());
+        System.out.println("Row count: " + reader.getNumberOfRows());
 
-    // Pick the schema we want to read using schema evolution
-    TypeDescription readSchema =
-        TypeDescription.fromString("struct<z:int,y:string,x:bigint>");
-    // Read the row data
-    VectorizedRowBatch batch = readSchema.createRowBatch();
-    RecordReader rowIterator = reader.rows(reader.options()
-                                             .schema(readSchema));
-    LongColumnVector z = (LongColumnVector) batch.cols[0];
-    BytesColumnVector y = (BytesColumnVector) batch.cols[1];
-    LongColumnVector x = (LongColumnVector) batch.cols[2];
-    while (rowIterator.nextBatch(batch)) {
-      for(int row=0; row < batch.size; ++row) {
-        int zRow = z.isRepeating ? 0: row;
-        int xRow = x.isRepeating ? 0: row;
-        System.out.println("z: " +
-            (z.noNulls || !z.isNull[zRow] ? z.vector[zRow] : null));
-        System.out.println("y: " + y.toString(row));
-        System.out.println("x: " +
-            (x.noNulls || !x.isNull[xRow] ? x.vector[xRow] : null));
-      }
+        // Pick the schema we want to read using schema evolution
+        TypeDescription readSchema =
+                TypeDescription.fromString("struct<z:int,y:string,x:bigint>");
+        // Read the row data
+        VectorizedRowBatch batch = readSchema.createRowBatch();
+        RecordReader rowIterator = reader.rows(reader.options()
+                .schema(readSchema));
+        LongColumnVector z = (LongColumnVector) batch.cols[0];
+        BytesColumnVector y = (BytesColumnVector) batch.cols[1];
+        LongColumnVector x = (LongColumnVector) batch.cols[2];
+        while (rowIterator.nextBatch(batch)) {
+            for (int row = 0; row < batch.size; ++row) {
+                int zRow = z.isRepeating ? 0 : row;
+                int xRow = x.isRepeating ? 0 : row;
+                System.out.println("z: " +
+                        (z.noNulls || !z.isNull[zRow] ? z.vector[zRow] : null));
+                System.out.println("y: " + y.toString(row));
+                System.out.println("x: " +
+                        (x.noNulls || !x.isNull[xRow] ? x.vector[xRow] : null));
+            }
+        }
+        rowIterator.close();
     }
-    rowIterator.close();
-  }
 
-  public static void main(String[] args) throws IOException {
-    main(new Configuration(), args);
-  }
+    public static void main(String[] args) throws IOException {
+        main(new Configuration(), args);
+    }
 }

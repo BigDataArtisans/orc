@@ -1,5 +1,16 @@
 
 
+cd /work/projects/BigDataArtisans/orc/java
+grep -rl 1.7.6 . | xargs sed -i "" 's/1.7.6/1.7.6/g'
+mvn clean package install -DskipTests
+
+
+cd /work/projects/BigDataArtisans/orc/java/tools
+mvn clean package -DskipTests
+
+
+
+
 
 
 

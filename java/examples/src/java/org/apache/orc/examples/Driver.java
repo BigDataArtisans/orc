@@ -33,72 +33,72 @@ import java.util.Properties;
  */
 public class Driver {
 
-  @SuppressWarnings("static-access")
-  static Options createOptions() {
-    Options result = new Options();
+    @SuppressWarnings("static-access")
+    static Options createOptions() {
+        Options result = new Options();
 
-    result.addOption("h", "help", false, "Print help message");
-    result.addOption("D", "define", true, "Set a configuration property");
-    return result;
-  }
+        result.addOption("h", "help", false, "Print help message");
+        result.addOption("D", "define", true, "Set a configuration property");
+        return result;
+    }
 
-  static class DriverOptions {
-    final CommandLine genericOptions;
-    final String command;
-    final String[] commandArgs;
+    static class DriverOptions {
+        final CommandLine genericOptions;
+        final String command;
+        final String[] commandArgs;
 
-    DriverOptions(String[] args) throws ParseException {
-      genericOptions = new DefaultParser().parse(createOptions(), args, true);
-      String[] unprocessed = genericOptions.getArgs();
-      if (unprocessed.length == 0) {
-        command = null;
-        commandArgs = new String[0];
-      } else {
-        command = unprocessed[0];
-        if (genericOptions.hasOption('h')) {
-          commandArgs = new String[]{"-h"};
-        } else {
-          commandArgs = new String[unprocessed.length - 1];
-          System.arraycopy(unprocessed, 1, commandArgs, 0, commandArgs.length);
+        DriverOptions(String[] args) throws ParseException {
+            genericOptions = new DefaultParser().parse(createOptions(), args, true);
+            String[] unprocessed = genericOptions.getArgs();
+            if (unprocessed.length == 0) {
+                command = null;
+                commandArgs = new String[0];
+            } else {
+                command = unprocessed[0];
+                if (genericOptions.hasOption('h')) {
+                    commandArgs = new String[]{"-h"};
+                } else {
+                    commandArgs = new String[unprocessed.length - 1];
+                    System.arraycopy(unprocessed, 1, commandArgs, 0, commandArgs.length);
+                }
+            }
         }
-      }
     }
-  }
 
-  public static void main(String[] args) throws Exception {
-    DriverOptions options = new DriverOptions(args);
+    public static void main(String[] args) throws Exception {
+        DriverOptions options = new DriverOptions(args);
 
-    if (options.command == null) {
-      System.err.println("ORC Java Examples");
-      System.err.println();
-      System.err.println("usage: java -jar orc-examples-*.jar [--help]" +
-          " [--define X=Y] <command> <args>");
-      System.err.println();
-      System.err.println("Commands:");
-      System.err.println("   write - write a sample ORC file");
-      System.err.println("   read - read a sample ORC file");
-      System.err.println("   write2 - write a sample ORC file with a map");
-      System.err.println();
-      System.err.println("To get more help, provide -h to the command");
-      System.exit(1);
+        if (options.command == null) {
+            System.err.println("ORC Java Examples");
+            System.err.println();
+            System.err.println("usage: java -jar orc-examples-*.jar [--help]" +
+                    " [--define X=Y] <command> <args>");
+            System.err.println();
+            System.err.println("Commands:");
+            System.err.println("   write - write a sample ORC file");
+            System.err.println("   read - read a sample ORC file");
+            System.err.println("   write2 - write a sample ORC file with a map");
+            System.err.println();
+            System.err.println("To get more help, provide -h to the command");
+            System.exit(1);
+        }
+        Configuration conf = new Configuration();
+        String[] confSettings = options.genericOptions.getOptionValues("D");
+        if (confSettings != null) {
+            for (String param : confSettings) {
+                String[] parts = param.split("=", 2);
+                conf.set(parts[0], parts[1]);
+            }
+        }
+        if ("read".equals(options.command)) {
+            CoreReader.main(conf, options.commandArgs);
+        } else if ("write".equals(options.command)) {
+            CoreWriter.main(conf, options.commandArgs);
+        } else if ("write2".equals(options.command)) {
+            AdvancedWriter.main(conf, options.commandArgs);
+        } else {
+            System.err.println("Unknown subcommand: " + options.command);
+            System.exit(1);
+        }
     }
-    Configuration conf = new Configuration();
-    String[] confSettings = options.genericOptions.getOptionValues("D");
-    if (confSettings != null) {
-      for (String param : confSettings) {
-        String[] parts = param.split("=", 2);
-        conf.set(parts[0], parts[1]);
-      }
-    }
-    if ("read".equals(options.command)) {
-      CoreReader.main(conf, options.commandArgs);
-    } else if ("write".equals(options.command)) {
-      CoreWriter.main(conf, options.commandArgs);
-    } else if ("write2".equals(options.command)) {
-      AdvancedWriter.main(conf, options.commandArgs);
-    } else {
-      System.err.println("Unknown subcommand: " + options.command);
-      System.exit(1);
-    }
-  }
 }
