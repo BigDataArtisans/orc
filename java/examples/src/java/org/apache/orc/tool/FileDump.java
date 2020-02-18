@@ -141,7 +141,7 @@ public final class FileDump {
     Configuration conf = new Configuration();
 
 //    PrintData.main(conf, filesInPath.toArray(new String[filesInPath.size()]));
-    printMetaDataImpl("my-file.orc", conf, new ArrayList<>(), false, new ArrayList<>());
+    printMetaDataImpl("my-file.orc", conf, Arrays.asList(1), true, new ArrayList<>());
 
   }
 
@@ -318,6 +318,7 @@ public final class FileDump {
         }
         System.out.println(buf);
       }
+      System.out.println(rowIndexCols);
       if (rowIndexCols != null && !rowIndexCols.isEmpty()) {
         // include the columns that are specified, only if the columns are included, bloom filter
         // will be read
