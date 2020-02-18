@@ -133,14 +133,16 @@ public final class FileDump {
         boolean prettyPrint = cli.hasOption('p');
         // JsonFileDump.printJsonMetaData(filesInPath, conf, rowIndexCols, prettyPrint, printTimeZone);
       } else {
-        printMetaData(filesInPath, conf, rowIndexCols, printTimeZone, recover, backupPath);
       }
     }
   }
 
   public static void main(String[] args) throws Exception {
     Configuration conf = new Configuration();
-    printMetaData(Arrays.asList("my-file.orc"), conf, new ArrayList<>(), false, false, DEFAULT_BACKUP_PATH);
+
+//    PrintData.main(conf, filesInPath.toArray(new String[filesInPath.size()]));
+    printMetaDataImpl("my-file.orc", conf, new ArrayList<>(), false, new ArrayList<>());
+
   }
 
   /**
@@ -171,76 +173,10 @@ public final class FileDump {
    */
   static Reader getReader(final Path path, final Configuration conf,
       final List<String> corruptFiles) throws IOException {
-    FileSystem fs = path.getFileSystem(conf);
-    long dataFileLen = fs.getFileStatus(path).getLen();
-    System.err.println("Processing data file " + path + " [length: " + dataFileLen + "]");
-    Path sideFile = OrcAcidUtils.getSideFile(path);
-    final boolean sideFileExists = fs.exists(sideFile);
-    boolean openDataFile = false;
-    boolean openSideFile = false;
-    if (fs instanceof DistributedFileSystem) {
-      DistributedFileSystem dfs = (DistributedFileSystem) fs;
-      openDataFile = !dfs.isFileClosed(path);
-      openSideFile = sideFileExists && !dfs.isFileClosed(sideFile);
-    }
 
-    if (openDataFile || openSideFile) {
-      if (openDataFile && openSideFile) {
-        System.err.println("Unable to perform file dump as " + path + " and " + sideFile +
-            " are still open for writes.");
-      } else if (openSideFile) {
-        System.err.println("Unable to perform file dump as " + sideFile +
-            " is still open for writes.");
-      } else {
-        System.err.println("Unable to perform file dump as " + path +
-            " is still open for writes.");
-      }
 
-      return null;
-    }
+    Reader reader = OrcFile.createReader(path, OrcFile.readerOptions(conf));
 
-    Reader reader = null;
-    if (sideFileExists) {
-      final long maxLen = OrcAcidUtils.getLastFlushLength(fs, path);
-      final long sideFileLen = fs.getFileStatus(sideFile).getLen();
-      System.err.println("Found flush length file " + sideFile
-          + " [length: " + sideFileLen + ", maxFooterOffset: " + maxLen + "]");
-      // no offsets read from side file
-      if (maxLen == -1) {
-
-        // if data file is larger than last flush length, then additional data could be recovered
-        if (dataFileLen > maxLen) {
-          System.err.println("Data file has more data than max footer offset:" + maxLen +
-              ". Adding data file to recovery list.");
-          if (corruptFiles != null) {
-            corruptFiles.add(path.toUri().toString());
-          }
-        }
-        return null;
-      }
-
-      try {
-        reader = OrcFile.createReader(path, OrcFile.readerOptions(conf).maxLength(maxLen));
-
-        // if data file is larger than last flush length, then additional data could be recovered
-        if (dataFileLen > maxLen) {
-          System.err.println("Data file has more data than max footer offset:" + maxLen +
-              ". Adding data file to recovery list.");
-          if (corruptFiles != null) {
-            corruptFiles.add(path.toUri().toString());
-          }
-        }
-      } catch (Exception e) {
-        if (corruptFiles != null) {
-          corruptFiles.add(path.toUri().toString());
-        }
-        System.err.println("Unable to read data from max footer offset." +
-            " Adding data file to recovery list.");
-        return null;
-      }
-    } else {
-      reader = OrcFile.createReader(path, OrcFile.readerOptions(conf));
-    }
 
     return reader;
   }
@@ -266,33 +202,7 @@ public final class FileDump {
     return filesInPath;
   }
 
-  private static void printMetaData(List<String> files, Configuration conf,
-      List<Integer> rowIndexCols, boolean printTimeZone, final boolean recover,
-      final String backupPath)
-      throws IOException {
-    List<String> corruptFiles = new ArrayList<>();
-    for (String filename : files) {
-      printMetaDataImpl(filename, conf, rowIndexCols, printTimeZone, corruptFiles);
-      System.out.println(SEPARATOR);
-    }
 
-    if (!corruptFiles.isEmpty()) {
-      if (recover) {
-        recoverFiles(corruptFiles, conf, backupPath);
-      } else {
-        System.err.println(corruptFiles.size() + " file(s) are corrupted." +
-            " Run the following command to recover corrupted files.\n");
-        StringBuilder buffer = new StringBuilder();
-        buffer.append("hive --orcfiledump --recover --skip-dump");
-        for(String file: corruptFiles) {
-          buffer.append(' ');
-          buffer.append(file);
-        }
-        System.err.println(buffer.toString());
-        System.out.println(SEPARATOR);
-      }
-    }
-  }
 
   static void printTypeAnnotations(TypeDescription type, String prefix) {
     List<String> attributes = type.getAttributeNames();
@@ -331,11 +241,8 @@ public final class FileDump {
       final Configuration conf, List<Integer> rowIndexCols, final boolean printTimeZone,
       final List<String> corruptFiles) throws IOException {
     Path file = new Path(filename);
-    Reader reader = getReader(file, conf, corruptFiles);
-    // if we can create reader then footer is not corrupt and file will readable
-    if (reader == null) {
-      return;
-    }
+    Reader reader = OrcFile.createReader(file, OrcFile.readerOptions(conf));
+
     TypeDescription schema = reader.getSchema();
     System.out.println("Structure for " + filename);
     System.out.println("File Version: " + reader.getFileVersion().getName() +
